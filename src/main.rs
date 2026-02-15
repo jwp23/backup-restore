@@ -1,10 +1,3 @@
-mod conflict;
-mod copy;
-mod error;
-mod plan;
-mod report;
-mod scan;
-
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Instant;
@@ -13,8 +6,10 @@ use clap::Parser;
 use console::style;
 use dialoguer::{Confirm, Select};
 
-use conflict::Resolution;
-use error::{Conflict, DetectedMapping, XdgDir};
+use backup_restore::conflict::{self, Resolution};
+use backup_restore::error::{Conflict, DetectedMapping, XdgDir};
+use backup_restore::copy;
+use backup_restore::{plan, report, scan};
 
 #[derive(Parser)]
 #[command(name = "backup-restore", about = "Restore files from a backup into your home directory")]
