@@ -33,7 +33,7 @@ pub fn execute_plan(plan: &CopyPlan, jobs: usize) -> CopyResult {
     });
 
     let jobs = jobs.max(1);
-    let chunk_size = (plan.files.len() + jobs - 1) / jobs;
+    let chunk_size = plan.files.len().div_ceil(jobs);
     let chunks: Vec<&[CopyOp]> = if plan.files.is_empty() {
         Vec::new()
     } else {
