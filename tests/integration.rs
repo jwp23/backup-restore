@@ -6,7 +6,7 @@ use backup_restore::conflict::{apply_resolution, Resolution};
 use backup_restore::copy::execute_plan;
 use backup_restore::error::XdgDir;
 use backup_restore::plan::build_plan;
-use backup_restore::report::format_report;
+use backup_restore::report::{format_dry_run_report, format_report};
 use backup_restore::scan::scan_backup;
 
 /// Full pipeline: nested backup structure → scan → plan → copy → report
@@ -111,6 +111,49 @@ fn pipeline_with_conflicts_and_resolution() {
         "new readme"
     );
     assert!(!home.path().join("Documents/readme.restore.txt").exists());
+}
+
+/// Dry-run pipeline: scan → plan → report, no files written to dest
+#[test]
+fn dry_run_does_not_write_files() {
+    let backup_root = tempdir().unwrap();
+    let home = tempdir().unwrap();
+
+    // Set up backup with Documents and Music
+    let docs = backup_root.path().join("Documents");
+    let music = backup_root.path().join("Music");
+    fs::create_dir(&docs).unwrap();
+    fs::create_dir(&music).unwrap();
+    fs::write(docs.join("notes.txt"), "my notes").unwrap();
+    fs::write(music.join("song.mp3"), "audio data").unwrap();
+
+    // Pre-create a file at dest to test conflict detection
+    fs::create_dir(home.path().join("Documents")).unwrap();
+    fs::write(home.path().join("Documents/notes.txt"), "old notes").unwrap();
+
+    // Scan & plan (same as real pipeline)
+    let mappings = scan_backup(backup_root.path(), home.path());
+    let plan = build_plan(&mappings).unwrap();
+
+    // Dry-run report instead of execute_plan
+    let report = format_dry_run_report(&plan);
+
+    // Report contains expected content
+    assert!(report.contains("2 files"), "should show 2 files total");
+    assert!(report.contains("Documents"), "should mention Documents");
+    assert!(report.contains("Music"), "should mention Music");
+    assert!(report.contains("1 conflict"), "should detect existing notes.txt");
+
+    // Nothing was written to dest (Music dir should not exist, old file untouched)
+    assert!(
+        !home.path().join("Music").exists(),
+        "Music dir should not be created in dry run"
+    );
+    assert_eq!(
+        fs::read_to_string(home.path().join("Documents/notes.txt")).unwrap(),
+        "old notes",
+        "existing file should be untouched"
+    );
 }
 
 /// Empty backup directories are created at destination

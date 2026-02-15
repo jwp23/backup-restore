@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fmt::Write;
 use std::time::Duration;
 
-use crate::error::{CopyResult, XdgDir};
+use crate::error::{CopyPlan, CopyResult, XdgDir};
 
 /// Format a summary report of the copy operation.
 pub fn format_report(result: &CopyResult, elapsed: Duration) -> String {
@@ -65,6 +65,55 @@ pub fn format_report(result: &CopyResult, elapsed: Duration) -> String {
                 writeln!(out, "  {} → {}", c.original_path.display(), c.restore_path.display()).unwrap();
             }
             writeln!(out, "  ... and {} more", result.conflicts.len() - 5).unwrap();
+        }
+    }
+
+    out
+}
+
+/// Format a preview of what a copy plan would do, without executing it.
+pub fn format_dry_run_report(plan: &CopyPlan) -> String {
+    let mut out = String::new();
+
+    writeln!(out, "\n--- Dry Run ---").unwrap();
+    writeln!(
+        out,
+        "{} files, {} total",
+        plan.files.len(),
+        format_bytes(plan.total_bytes)
+    )
+    .unwrap();
+    writeln!(out, "{} directories to create", plan.dirs.len()).unwrap();
+
+    // Per-XDG breakdown
+    let mut by_dir: HashMap<XdgDir, (usize, u64)> = HashMap::new();
+    for f in &plan.files {
+        let entry = by_dir.entry(f.xdg_dir).or_default();
+        entry.0 += 1;
+        entry.1 += f.size;
+    }
+
+    if !by_dir.is_empty() {
+        writeln!(out, "\nPer directory:").unwrap();
+        let mut dirs: Vec<_> = by_dir.into_iter().collect();
+        dirs.sort_by_key(|(d, _)| d.dir_name());
+        for (dir, (count, bytes)) in dirs {
+            writeln!(out, "  {:<12} {} files, {}", dir, count, format_bytes(bytes)).unwrap();
+        }
+    }
+
+    // Conflict detection: dest files that already exist
+    let conflicts: Vec<_> = plan.files.iter().filter(|f| f.dest.exists()).collect();
+    if !conflicts.is_empty() {
+        writeln!(
+            out,
+            "\n{} conflict{} (existing files at destination):",
+            conflicts.len(),
+            if conflicts.len() == 1 { "" } else { "s" }
+        )
+        .unwrap();
+        for c in &conflicts {
+            writeln!(out, "  {}", c.dest.display()).unwrap();
         }
     }
 
@@ -203,6 +252,66 @@ mod tests {
         let report = format_report(&result, Duration::from_secs(1));
 
         assert!(report.contains("... and 10 more"));
+    }
+
+    #[test]
+    fn dry_run_report_shows_plan_summary() {
+        use crate::error::{CopyOp, CopyPlan, DirOp};
+        use tempfile::tempdir;
+
+        let home = tempdir().unwrap();
+        let docs_dir = home.path().join("Documents");
+        let music_dir = home.path().join("Music");
+
+        // Pre-create one dest file to trigger conflict detection
+        std::fs::create_dir_all(&docs_dir).unwrap();
+        std::fs::write(docs_dir.join("existing.txt"), "old").unwrap();
+
+        let plan = CopyPlan {
+            dirs: vec![
+                DirOp { dest: docs_dir.clone() },
+                DirOp { dest: docs_dir.join("subdir") },
+                DirOp { dest: music_dir.clone() },
+            ],
+            files: vec![
+                CopyOp {
+                    source: PathBuf::from("/backup/Documents/existing.txt"),
+                    dest: docs_dir.join("existing.txt"),
+                    size: 100,
+                    xdg_dir: XdgDir::Documents,
+                },
+                CopyOp {
+                    source: PathBuf::from("/backup/Documents/new.txt"),
+                    dest: docs_dir.join("new.txt"),
+                    size: 250,
+                    xdg_dir: XdgDir::Documents,
+                },
+                CopyOp {
+                    source: PathBuf::from("/backup/Music/song.mp3"),
+                    dest: music_dir.join("song.mp3"),
+                    size: 5000,
+                    xdg_dir: XdgDir::Music,
+                },
+            ],
+            total_bytes: 5350,
+        };
+
+        let report = format_dry_run_report(&plan);
+
+        // Total summary
+        assert!(report.contains("3 files"), "should show total file count");
+        assert!(report.contains("5.2 KiB"), "should show total bytes");
+
+        // Directories to create
+        assert!(report.contains("3 directories"), "should show directory count");
+
+        // Per-XDG breakdown
+        assert!(report.contains("Documents"), "should show Documents");
+        assert!(report.contains("Music"), "should show Music");
+
+        // Conflict detection
+        assert!(report.contains("1 conflict"), "should detect existing dest file");
+        assert!(report.contains("existing.txt"), "should name the conflicting file");
     }
 
     #[test]

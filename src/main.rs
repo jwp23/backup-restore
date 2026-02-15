@@ -24,6 +24,10 @@ struct Cli {
     /// Home directory to restore into (defaults to $HOME)
     #[arg(long)]
     home: Option<PathBuf>,
+
+    /// Preview what would happen without copying anything
+    #[arg(short = 'n', long)]
+    dry_run: bool,
 }
 
 fn main() {
@@ -98,6 +102,11 @@ fn main() {
             std::process::exit(1);
         }
     };
+
+    if cli.dry_run {
+        print!("{}", report::format_dry_run_report(&copy_plan));
+        return;
+    }
 
     println!(
         "\n{} {} files to copy ({} total)",
