@@ -71,7 +71,7 @@ pub fn format_report(result: &CopyResult, elapsed: Duration) -> String {
     out
 }
 
-fn format_bytes(bytes: u64) -> String {
+pub fn format_bytes(bytes: u64) -> String {
     const KB: u64 = 1024;
     const MB: u64 = 1024 * KB;
     const GB: u64 = 1024 * MB;
