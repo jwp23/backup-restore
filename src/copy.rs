@@ -1,8 +1,8 @@
 use std::ffi::OsString;
+use std::fs::{self, File};
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
-use std::fs;
 
 use indicatif::{ProgressBar, ProgressStyle};
 
@@ -56,39 +56,42 @@ pub fn execute_plan(plan: &CopyPlan, jobs: usize) -> io::Result<CopyResult> {
 }
 
 fn copy_file(op: &CopyOp, result: &Mutex<CopyResult>, progress: &ProgressBar) {
-    let dest = if op.dest.exists() {
-        find_restore_path(&op.dest)
-    } else {
-        op.dest.clone()
-    };
-
-    let is_conflict = dest != op.dest;
-
-    match fs::copy(&op.source, &dest) {
+    match try_copy_atomic(&op.source, &op.dest) {
         Ok(bytes) => {
-            // Preserve permissions
-            if let Ok(metadata) = fs::metadata(&op.source) {
-                let _ = fs::set_permissions(&dest, metadata.permissions());
-            }
-
+            preserve_permissions(&op.source, &op.dest);
             let mut r = result.lock().unwrap();
             r.bytes_copied += bytes;
             progress.inc(bytes);
-
-            if is_conflict {
-                r.conflicts.push(Conflict {
-                    restore_path: dest,
-                    original_path: op.dest.clone(),
-                    size: bytes,
-                    xdg_dir: op.xdg_dir,
-                });
-            } else {
-                r.copied.push(CopiedFile {
-                    source: op.source.clone(),
-                    dest,
-                    size: bytes,
-                    xdg_dir: op.xdg_dir,
-                });
+            r.copied.push(CopiedFile {
+                source: op.source.clone(),
+                dest: op.dest.clone(),
+                size: bytes,
+                xdg_dir: op.xdg_dir,
+            });
+        }
+        Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
+            match write_to_restore_path(&op.source, &op.dest) {
+                Ok((restore_path, bytes)) => {
+                    let mut r = result.lock().unwrap();
+                    r.bytes_copied += bytes;
+                    progress.inc(bytes);
+                    r.conflicts.push(Conflict {
+                        restore_path,
+                        original_path: op.dest.clone(),
+                        size: bytes,
+                        xdg_dir: op.xdg_dir,
+                    });
+                }
+                Err(error) => {
+                    progress.inc(op.size);
+                    let mut r = result.lock().unwrap();
+                    r.errors.push(CopyError {
+                        source: op.source.clone(),
+                        dest: op.dest.clone(),
+                        error,
+                        xdg_dir: op.xdg_dir,
+                    });
+                }
             }
         }
         Err(error) => {
@@ -104,34 +107,53 @@ fn copy_file(op: &CopyOp, result: &Mutex<CopyResult>, progress: &ProgressBar) {
     }
 }
 
-/// Find an available `.restore` path for a conflicting file.
-///
-/// Given `photo.jpg`, tries `photo.restore.jpg`, then `photo.restore.2.jpg`, etc.
-/// For files without extensions, tries `file.restore`, `file.restore.2`, etc.
-fn find_restore_path(original: &Path) -> PathBuf {
-    let stem = original
-        .file_stem()
-        .unwrap_or_default();
-    let ext = original.extension();
-    let parent = original.parent().unwrap_or(Path::new(""));
+/// Atomically create dest and copy source into it.
+/// Returns AlreadyExists if dest already exists.
+fn try_copy_atomic(source: &Path, dest: &Path) -> io::Result<u64> {
+    let mut src_file = File::open(source)?;
+    let mut dst_file = File::create_new(dest)?;
+    let bytes = io::copy(&mut src_file, &mut dst_file)?;
+    Ok(bytes)
+}
+
+/// Copy source to a .restore path, retrying with incrementing suffixes
+/// if those also already exist.
+fn write_to_restore_path(source: &Path, original_dest: &Path) -> io::Result<(PathBuf, u64)> {
+    let stem = original_dest.file_stem().unwrap_or_default();
+    let ext = original_dest.extension();
+    let parent = original_dest.parent().unwrap_or(Path::new(""));
 
     // First try: name.restore.ext
-    let candidate = make_restore_name(stem, ext, None);
-    let path = parent.join(&candidate);
-    if !path.exists() {
-        return path;
+    let candidate = parent.join(make_restore_name(stem, ext, None));
+    match try_copy_atomic(source, &candidate) {
+        Ok(bytes) => {
+            preserve_permissions(source, &candidate);
+            return Ok((candidate, bytes));
+        }
+        Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {}
+        Err(e) => return Err(e),
     }
 
     // Subsequent tries: name.restore.N.ext
     for n in 2u32.. {
-        let candidate = make_restore_name(stem, ext, Some(n));
-        let path = parent.join(&candidate);
-        if !path.exists() {
-            return path;
+        let candidate = parent.join(make_restore_name(stem, ext, Some(n)));
+        match try_copy_atomic(source, &candidate) {
+            Ok(bytes) => {
+                preserve_permissions(source, &candidate);
+                return Ok((candidate, bytes));
+            }
+            Err(e) if e.kind() == io::ErrorKind::AlreadyExists => continue,
+            Err(e) => return Err(e),
         }
     }
 
     unreachable!()
+}
+
+fn preserve_permissions(source: &Path, dest: &Path) {
+    if let Ok(metadata) = fs::metadata(source) {
+        let _ = fs::set_permissions(dest, metadata.permissions());
+    }
 }
 
 fn make_restore_name(stem: &std::ffi::OsStr, ext: Option<&std::ffi::OsStr>, n: Option<u32>) -> OsString {
