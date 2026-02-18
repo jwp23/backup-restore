@@ -125,7 +125,17 @@ fn main() {
 
     // Step 3: Copy
     let start = Instant::now();
-    let result = copy::execute_plan(&copy_plan, cli.jobs);
+    let result = match copy::execute_plan(&copy_plan, cli.jobs) {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!(
+                "{} Failed to create directories: {}",
+                style("Error:").red().bold(),
+                e
+            );
+            std::process::exit(1);
+        }
+    };
     let elapsed = start.elapsed();
 
     // Step 4: Report

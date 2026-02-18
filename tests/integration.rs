@@ -42,7 +42,7 @@ fn full_pipeline_nested_backup() {
     assert!(plan.total_bytes > 0);
 
     // Step 3: Copy
-    let result = execute_plan(&plan, 2);
+    let result = execute_plan(&plan, 2).unwrap();
     assert_eq!(result.copied.len(), 4);
     assert_eq!(result.conflicts.len(), 0);
     assert_eq!(result.errors.len(), 0);
@@ -89,7 +89,7 @@ fn pipeline_with_conflicts_and_resolution() {
     let plan = build_plan(&scan_result.mappings).unwrap();
 
     // Copy
-    let result = execute_plan(&plan, 1);
+    let result = execute_plan(&plan, 1).unwrap();
     assert_eq!(result.copied.len(), 1); // fresh.txt
     assert_eq!(result.conflicts.len(), 1); // readme.txt
     assert_eq!(result.errors.len(), 0);
@@ -169,7 +169,7 @@ fn empty_directories_created() {
 
     let scan_result = scan_backup(backup_root.path(), home.path());
     let plan = build_plan(&scan_result.mappings).unwrap();
-    let result = execute_plan(&plan, 1);
+    let result = execute_plan(&plan, 1).unwrap();
 
     assert_eq!(result.copied.len(), 0);
     assert!(home.path().join("Pictures").is_dir());

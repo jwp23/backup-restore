@@ -1,4 +1,5 @@
 use std::ffi::OsString;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::fs;
@@ -12,10 +13,10 @@ use crate::types::{Conflict, CopiedFile, CopyError, CopyOp, CopyPlan, CopyResult
 /// Creates all directories first, then copies files in parallel across
 /// `jobs` threads. If a destination file exists, writes to a `.restore`
 /// suffixed path instead and records a conflict.
-pub fn execute_plan(plan: &CopyPlan, jobs: usize) -> CopyResult {
+pub fn execute_plan(plan: &CopyPlan, jobs: usize) -> io::Result<CopyResult> {
     // Create all directories first
     for dir_op in &plan.dirs {
-        let _ = fs::create_dir_all(&dir_op.dest);
+        fs::create_dir_all(&dir_op.dest)?;
     }
 
     let progress = ProgressBar::new(plan.total_bytes);
@@ -51,7 +52,7 @@ pub fn execute_plan(plan: &CopyPlan, jobs: usize) -> CopyResult {
     });
 
     progress.finish_and_clear();
-    result.into_inner().unwrap()
+    Ok(result.into_inner().unwrap())
 }
 
 fn copy_file(op: &CopyOp, result: &Mutex<CopyResult>, progress: &ProgressBar) {
@@ -175,7 +176,7 @@ mod tests {
             total_bytes: 5,
         };
 
-        let result = execute_plan(&plan, 1);
+        let result = execute_plan(&plan, 1).unwrap();
 
         assert_eq!(result.copied.len(), 1);
         assert_eq!(result.conflicts.len(), 0);
@@ -208,7 +209,7 @@ mod tests {
             total_bytes: 11,
         };
 
-        let result = execute_plan(&plan, 1);
+        let result = execute_plan(&plan, 1).unwrap();
 
         assert_eq!(result.copied.len(), 0);
         assert_eq!(result.conflicts.len(), 1);
@@ -253,7 +254,7 @@ mod tests {
             total_bytes: 5,
         };
 
-        let result = execute_plan(&plan, 1);
+        let result = execute_plan(&plan, 1).unwrap();
 
         assert_eq!(result.conflicts.len(), 1);
         assert_eq!(
@@ -285,7 +286,7 @@ mod tests {
             total_bytes: 3,
         };
 
-        let result = execute_plan(&plan, 1);
+        let result = execute_plan(&plan, 1).unwrap();
 
         assert_eq!(result.conflicts.len(), 1);
         assert_eq!(
@@ -317,7 +318,7 @@ mod tests {
             total_bytes: 9,
         };
 
-        let result = execute_plan(&plan, 1);
+        let result = execute_plan(&plan, 1).unwrap();
 
         assert_eq!(result.errors.len(), 0);
         let perms = fs::metadata(dest.path().join("Documents/script.sh"))
@@ -353,7 +354,7 @@ mod tests {
             total_bytes: 14,
         };
 
-        let result = execute_plan(&plan, 1);
+        let result = execute_plan(&plan, 1).unwrap();
 
         assert_eq!(result.errors.len(), 1);
         assert_eq!(result.copied.len(), 1);
@@ -389,10 +390,35 @@ mod tests {
             total_bytes: total,
         };
 
-        let result = execute_plan(&plan, 4);
+        let result = execute_plan(&plan, 4).unwrap();
 
         assert_eq!(result.copied.len(), 20);
         assert_eq!(result.errors.len(), 0);
         assert_eq!(result.bytes_copied, total);
+    }
+
+    #[test]
+    fn returns_error_when_dir_creation_fails() {
+        let src = tempdir().unwrap();
+        let dest = tempdir().unwrap();
+        fs::write(src.path().join("hello.txt"), "world").unwrap();
+
+        // Create a file where a directory needs to go
+        fs::write(dest.path().join("Documents"), "blocker").unwrap();
+
+        let plan = CopyPlan {
+            dirs: vec![DirOp {
+                dest: dest.path().join("Documents"),
+            }],
+            files: vec![CopyOp {
+                source: src.path().join("hello.txt"),
+                dest: dest.path().join("Documents/hello.txt"),
+                size: 5,
+                xdg_dir: XdgDir::Documents,
+            }],
+            total_bytes: 5,
+        };
+
+        assert!(execute_plan(&plan, 1).is_err());
     }
 }
