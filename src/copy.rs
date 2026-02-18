@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use indicatif::{ProgressBar, ProgressStyle};
+use rayon::prelude::*;
 
 use crate::types::{Conflict, CopiedFile, CopyError, CopyOp, CopyPlan, CopyResult};
 
@@ -33,22 +34,15 @@ pub fn execute_plan(plan: &CopyPlan, jobs: usize) -> io::Result<CopyResult> {
         bytes_copied: 0,
     });
 
-    let jobs = jobs.max(1);
-    let chunk_size = plan.files.len().div_ceil(jobs);
-    let chunks: Vec<&[CopyOp]> = if plan.files.is_empty() {
-        Vec::new()
-    } else {
-        plan.files.chunks(chunk_size).collect()
-    };
+    let pool = rayon::ThreadPoolBuilder::new()
+        .num_threads(jobs.max(1))
+        .build()
+        .unwrap();
 
-    std::thread::scope(|s| {
-        for chunk in &chunks {
-            s.spawn(|| {
-                for op in *chunk {
-                    copy_file(op, &result, &progress);
-                }
-            });
-        }
+    pool.install(|| {
+        plan.files.par_iter().for_each(|op| {
+            copy_file(op, &result, &progress);
+        });
     });
 
     progress.finish_and_clear();
