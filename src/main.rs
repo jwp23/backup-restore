@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::time::Instant;
 
@@ -144,7 +144,7 @@ fn main() {
 }
 
 fn resolve_duplicate_mappings(all_mappings: Vec<DetectedMapping>) -> Vec<DetectedMapping> {
-    let mut by_dir: HashMap<XdgDir, Vec<DetectedMapping>> = HashMap::new();
+    let mut by_dir: BTreeMap<XdgDir, Vec<DetectedMapping>> = BTreeMap::new();
     for m in all_mappings {
         by_dir.entry(m.xdg_dir).or_default().push(m);
     }
@@ -175,7 +175,6 @@ fn resolve_duplicate_mappings(all_mappings: Vec<DetectedMapping>) -> Vec<Detecte
         }
     }
 
-    chosen.sort_by(|a, b| a.xdg_dir.dir_name().cmp(b.xdg_dir.dir_name()));
     chosen
 }
 
@@ -219,7 +218,7 @@ fn apply_to_all(conflicts: &[Conflict], resolution: Resolution) {
 }
 
 fn resolve_per_folder(conflicts: &[Conflict]) {
-    let mut by_dir: HashMap<XdgDir, Vec<&Conflict>> = HashMap::new();
+    let mut by_dir: BTreeMap<XdgDir, Vec<&Conflict>> = BTreeMap::new();
     for c in conflicts {
         by_dir.entry(c.xdg_dir).or_default().push(c);
     }

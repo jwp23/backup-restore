@@ -2,7 +2,7 @@ use std::fmt;
 use std::path::PathBuf;
 
 /// The 8 user-facing XDG directories we care about.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum XdgDir {
     Desktop,
     Documents,
