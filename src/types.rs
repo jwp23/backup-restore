@@ -123,6 +123,12 @@ impl fmt::Display for CopyError {
     }
 }
 
+impl std::error::Error for CopyError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&self.error)
+    }
+}
+
 /// Results of the copy operation.
 #[derive(Debug)]
 pub struct CopyResult {
