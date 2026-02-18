@@ -138,7 +138,7 @@ fn main() {
             .interact()
             .unwrap_or(false)
         {
-            delete_sources(&mappings, &cli.backup_dir);
+            delete_sources(&mappings);
         }
     }
 }
@@ -285,7 +285,7 @@ fn resolve_individually(conflicts: &[Conflict]) {
     }
 }
 
-fn delete_sources(mappings: &[DetectedMapping], _backup_dir: &PathBuf) {
+fn delete_sources(mappings: &[DetectedMapping]) {
     for mapping in mappings {
         if let Err(e) = std::fs::remove_dir_all(&mapping.source_path) {
             eprintln!(
