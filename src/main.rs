@@ -52,9 +52,17 @@ fn main() {
         style("→").cyan().bold(),
         cli.backup_dir.display()
     );
-    let all_mappings = scan::scan_backup(&cli.backup_dir, &home_dir);
+    let scan_result = scan::scan_backup(&cli.backup_dir, &home_dir);
 
-    if all_mappings.is_empty() {
+    for warning in &scan_result.warnings {
+        eprintln!(
+            "{} Scan warning: {}",
+            style("!").yellow().bold(),
+            warning
+        );
+    }
+
+    if scan_result.mappings.is_empty() {
         println!(
             "{} No XDG directories found in backup.",
             style("!").yellow().bold()
@@ -63,7 +71,7 @@ fn main() {
     }
 
     // Handle duplicates: group by XdgDir, let user choose if ambiguous
-    let mappings = resolve_duplicate_mappings(all_mappings);
+    let mappings = resolve_duplicate_mappings(scan_result.mappings);
 
     // Show detected mappings and confirm
     println!(

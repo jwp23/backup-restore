@@ -29,15 +29,15 @@ fn full_pipeline_nested_backup() {
     fs::write(downloads.join("setup.exe"), "binary data").unwrap();
 
     // Step 1: Scan
-    let mappings = scan_backup(backup_root.path(), home.path());
-    assert_eq!(mappings.len(), 2);
+    let scan_result = scan_backup(backup_root.path(), home.path());
+    assert_eq!(scan_result.mappings.len(), 2);
 
-    let xdg_dirs: Vec<XdgDir> = mappings.iter().map(|m| m.xdg_dir).collect();
+    let xdg_dirs: Vec<XdgDir> = scan_result.mappings.iter().map(|m| m.xdg_dir).collect();
     assert!(xdg_dirs.contains(&XdgDir::Documents));
     assert!(xdg_dirs.contains(&XdgDir::Downloads));
 
     // Step 2: Plan
-    let plan = build_plan(&mappings).unwrap();
+    let plan = build_plan(&scan_result.mappings).unwrap();
     assert_eq!(plan.files.len(), 4); // notes.txt, report.pdf, deep.txt, setup.exe
     assert!(plan.total_bytes > 0);
 
@@ -85,8 +85,8 @@ fn pipeline_with_conflicts_and_resolution() {
     fs::write(home.path().join("Documents/readme.txt"), "old readme").unwrap();
 
     // Scan & plan
-    let mappings = scan_backup(backup_root.path(), home.path());
-    let plan = build_plan(&mappings).unwrap();
+    let scan_result = scan_backup(backup_root.path(), home.path());
+    let plan = build_plan(&scan_result.mappings).unwrap();
 
     // Copy
     let result = execute_plan(&plan, 1);
@@ -132,8 +132,8 @@ fn dry_run_does_not_write_files() {
     fs::write(home.path().join("Documents/notes.txt"), "old notes").unwrap();
 
     // Scan & plan (same as real pipeline)
-    let mappings = scan_backup(backup_root.path(), home.path());
-    let plan = build_plan(&mappings).unwrap();
+    let scan_result = scan_backup(backup_root.path(), home.path());
+    let plan = build_plan(&scan_result.mappings).unwrap();
 
     // Dry-run report instead of execute_plan
     let report = format_dry_run_report(&plan);
@@ -167,8 +167,8 @@ fn empty_directories_created() {
     fs::create_dir(pics.join("Vacation")).unwrap();
     fs::create_dir(pics.join("Vacation").join("Empty Album")).unwrap();
 
-    let mappings = scan_backup(backup_root.path(), home.path());
-    let plan = build_plan(&mappings).unwrap();
+    let scan_result = scan_backup(backup_root.path(), home.path());
+    let plan = build_plan(&scan_result.mappings).unwrap();
     let result = execute_plan(&plan, 1);
 
     assert_eq!(result.copied.len(), 0);
