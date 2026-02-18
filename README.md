@@ -2,6 +2,21 @@
 
 Restores XDG user directories (Documents, Downloads, Music, Pictures, etc.) from a backup drive into your home directory. Handles nested backup layouts, parallel copying, conflict detection, and optional source cleanup.
 
+# Human Notes
+This project was built with claude code as an experiment to see if opus 4.6 was good enough to one shot a solution to real  need that I had with restoring backup from a previous linux distribution to my current one.
+
+The prompt was a paragraph long which left most of the ui to be created by model and to keep the code human readable.
+
+It wasn't quite a clean experiment since I had [obra's superpower](https://github.com/obra/superpowers) plugin installed at the user level. I think the only difference is that claude used TDD. None of the plugin's workflow was used.
+
+## Results
+* start to finish coding time: 49 minutes
+* cli moved 22GB and about 3800 files in 0.1s.
+* functionality was complete with only one addition of the dry run flag that I forgot to specify at the beginning. README.md was not automatically created.
+
+## Feedback
+I'm not a rust developer. I did a cursory look through the code and it seemed to be human readable. I'd like feedback from an experienced rust developer on the quality of the code created.
+
 ## Install
 
 Requires [Rust](https://rustup.rs/).
