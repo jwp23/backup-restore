@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::time::Instant;
 
+use anyhow::bail;
 use clap::Parser;
 use console::style;
 use dialoguer::{Confirm, Select};
@@ -31,6 +32,13 @@ struct Cli {
 }
 
 fn main() {
+    if let Err(e) = run() {
+        eprintln!("{} {:#}", style("Error:").red().bold(), e);
+        std::process::exit(1);
+    }
+}
+
+fn run() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     let home_dir = cli.home.unwrap_or_else(|| {
@@ -38,12 +46,10 @@ fn main() {
     });
 
     if !cli.backup_dir.is_dir() {
-        eprintln!(
-            "{} Backup directory does not exist: {}",
-            style("Error:").red().bold(),
+        bail!(
+            "Backup directory does not exist: {}",
             cli.backup_dir.display()
         );
-        std::process::exit(1);
     }
 
     // Step 1: Scan
@@ -67,11 +73,11 @@ fn main() {
             "{} No XDG directories found in backup.",
             style("!").yellow().bold()
         );
-        return;
+        return Ok(());
     }
 
     // Handle duplicates: group by XdgDir, let user choose if ambiguous
-    let mappings = resolve_duplicate_mappings(scan_result.mappings);
+    let mappings = resolve_duplicate_mappings(scan_result.mappings)?;
 
     // Show detected mappings and confirm
     println!(
@@ -95,25 +101,15 @@ fn main() {
         .unwrap_or(false)
     {
         println!("Aborted.");
-        return;
+        return Ok(());
     }
 
     // Step 2: Plan
-    let copy_plan = match plan::build_plan(&mappings) {
-        Ok(p) => p,
-        Err(e) => {
-            eprintln!(
-                "{} Failed to build copy plan: {}",
-                style("Error:").red().bold(),
-                e
-            );
-            std::process::exit(1);
-        }
-    };
+    let copy_plan = plan::build_plan(&mappings)?;
 
     if cli.dry_run {
         print!("{}", report::format_dry_run_report(&copy_plan));
-        return;
+        return Ok(());
     }
 
     println!(
@@ -125,17 +121,7 @@ fn main() {
 
     // Step 3: Copy
     let start = Instant::now();
-    let result = match copy::execute_plan(&copy_plan, cli.jobs) {
-        Ok(r) => r,
-        Err(e) => {
-            eprintln!(
-                "{} Failed to create directories: {}",
-                style("Error:").red().bold(),
-                e
-            );
-            std::process::exit(1);
-        }
-    };
+    let result = copy::execute_plan(&copy_plan, cli.jobs)?;
     let elapsed = start.elapsed();
 
     // Step 4: Report
@@ -144,7 +130,7 @@ fn main() {
     // Step 5: Conflict resolution
     if !result.conflicts.is_empty() {
         println!();
-        resolve_conflicts(&result.conflicts);
+        resolve_conflicts(&result.conflicts)?;
     }
 
     // Step 6: Optional source cleanup
@@ -159,9 +145,11 @@ fn main() {
             delete_sources(&mappings);
         }
     }
+
+    Ok(())
 }
 
-fn resolve_duplicate_mappings(all_mappings: Vec<DetectedMapping>) -> Vec<DetectedMapping> {
+fn resolve_duplicate_mappings(all_mappings: Vec<DetectedMapping>) -> anyhow::Result<Vec<DetectedMapping>> {
     let mut by_dir: BTreeMap<XdgDir, Vec<DetectedMapping>> = BTreeMap::new();
     for m in all_mappings {
         by_dir.entry(m.xdg_dir).or_default().push(m);
@@ -186,17 +174,16 @@ fn resolve_duplicate_mappings(all_mappings: Vec<DetectedMapping>) -> Vec<Detecte
                 .with_prompt(format!("Which {} to restore?", xdg_dir))
                 .items(&labels)
                 .default(0)
-                .interact()
-                .unwrap();
+                .interact()?;
 
             chosen.push(candidates.into_iter().nth(selection).unwrap());
         }
     }
 
-    chosen
+    Ok(chosen)
 }
 
-fn resolve_conflicts(conflicts: &[Conflict]) {
+fn resolve_conflicts(conflicts: &[Conflict]) -> anyhow::Result<()> {
     let options = &[
         "Overwrite all originals with restored versions",
         "Keep all originals (delete .restore files)",
@@ -209,17 +196,18 @@ fn resolve_conflicts(conflicts: &[Conflict]) {
         .with_prompt("How to handle conflicts?")
         .items(options)
         .default(4)
-        .interact()
-        .unwrap();
+        .interact()?;
 
     match selection {
         0 => apply_to_all(conflicts, Resolution::Overwrite),
         1 => apply_to_all(conflicts, Resolution::KeepOriginal),
-        2 => resolve_per_folder(conflicts),
-        3 => resolve_individually(conflicts),
+        2 => resolve_per_folder(conflicts)?,
+        3 => resolve_individually(conflicts)?,
         4 => apply_to_all(conflicts, Resolution::LeaveAsIs),
         _ => unreachable!(),
     }
+
+    Ok(())
 }
 
 fn apply_to_all(conflicts: &[Conflict], resolution: Resolution) {
@@ -235,7 +223,7 @@ fn apply_to_all(conflicts: &[Conflict], resolution: Resolution) {
     }
 }
 
-fn resolve_per_folder(conflicts: &[Conflict]) {
+fn resolve_per_folder(conflicts: &[Conflict]) -> anyhow::Result<()> {
     let mut by_dir: BTreeMap<XdgDir, Vec<&Conflict>> = BTreeMap::new();
     for c in conflicts {
         by_dir.entry(c.xdg_dir).or_default().push(c);
@@ -248,8 +236,7 @@ fn resolve_per_folder(conflicts: &[Conflict]) {
             .with_prompt(format!("{} ({} conflicts)", xdg_dir, folder_conflicts.len()))
             .items(options)
             .default(2)
-            .interact()
-            .unwrap();
+            .interact()?;
 
         let resolution = match selection {
             0 => Resolution::Overwrite,
@@ -268,9 +255,11 @@ fn resolve_per_folder(conflicts: &[Conflict]) {
             }
         }
     }
+
+    Ok(())
 }
 
-fn resolve_individually(conflicts: &[Conflict]) {
+fn resolve_individually(conflicts: &[Conflict]) -> anyhow::Result<()> {
     let options = &["Overwrite", "Keep original", "Leave as-is"];
 
     for c in conflicts {
@@ -283,8 +272,7 @@ fn resolve_individually(conflicts: &[Conflict]) {
             .with_prompt(prompt)
             .items(options)
             .default(2)
-            .interact()
-            .unwrap();
+            .interact()?;
 
         let resolution = match selection {
             0 => Resolution::Overwrite,
@@ -301,6 +289,8 @@ fn resolve_individually(conflicts: &[Conflict]) {
             );
         }
     }
+
+    Ok(())
 }
 
 fn delete_sources(mappings: &[DetectedMapping]) {
