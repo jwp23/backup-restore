@@ -2,7 +2,7 @@ use std::path::Path;
 
 use walkdir::WalkDir;
 
-use crate::error::{DetectedMapping, XdgDir};
+use crate::types::{DetectedMapping, XdgDir};
 
 /// Scan a backup directory and detect XDG directory mappings.
 ///

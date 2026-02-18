@@ -7,7 +7,7 @@ use console::style;
 use dialoguer::{Confirm, Select};
 
 use backup_restore::conflict::{self, Resolution};
-use backup_restore::error::{Conflict, DetectedMapping, XdgDir};
+use backup_restore::types::{Conflict, DetectedMapping, XdgDir};
 use backup_restore::copy;
 use backup_restore::{plan, report, scan};
 

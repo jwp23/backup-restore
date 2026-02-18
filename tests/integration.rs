@@ -4,7 +4,7 @@ use tempfile::tempdir;
 
 use backup_restore::conflict::{apply_resolution, Resolution};
 use backup_restore::copy::execute_plan;
-use backup_restore::error::XdgDir;
+use backup_restore::types::XdgDir;
 use backup_restore::plan::build_plan;
 use backup_restore::report::{format_dry_run_report, format_report};
 use backup_restore::scan::scan_backup;

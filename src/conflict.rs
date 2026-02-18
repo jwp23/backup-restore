@@ -1,5 +1,5 @@
 use std::fs;
-use crate::error::Conflict;
+use crate::types::Conflict;
 
 /// What to do with a conflict.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -29,7 +29,7 @@ pub fn apply_resolution(conflict: &Conflict, resolution: Resolution) -> std::io:
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::XdgDir;
+    use crate::types::XdgDir;
     use std::fs;
     use std::path::Path;
     use tempfile::tempdir;

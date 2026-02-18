@@ -5,7 +5,7 @@ use std::fs;
 
 use indicatif::{ProgressBar, ProgressStyle};
 
-use crate::error::{Conflict, CopiedFile, CopyError, CopyOp, CopyPlan, CopyResult};
+use crate::types::{Conflict, CopiedFile, CopyError, CopyOp, CopyPlan, CopyResult};
 
 /// Execute the copy plan, returning results with conflicts and errors.
 ///
@@ -152,7 +152,7 @@ fn make_restore_name(stem: &std::ffi::OsStr, ext: Option<&std::ffi::OsStr>, n: O
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::{CopyOp, DirOp, XdgDir};
+    use crate::types::{CopyOp, DirOp, XdgDir};
     use std::fs;
     use tempfile::tempdir;
 

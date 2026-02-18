@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fmt::Write;
 use std::time::Duration;
 
-use crate::error::{CopyPlan, CopyResult, XdgDir};
+use crate::types::{CopyPlan, CopyResult, XdgDir};
 
 /// Format a summary report of the copy operation.
 pub fn format_report(result: &CopyResult, elapsed: Duration) -> String {
@@ -139,7 +139,7 @@ pub fn format_bytes(bytes: u64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::{Conflict, CopiedFile, CopyError, XdgDir};
+    use crate::types::{Conflict, CopiedFile, CopyError, XdgDir};
     use std::path::PathBuf;
     use std::time::Duration;
 
@@ -256,7 +256,7 @@ mod tests {
 
     #[test]
     fn dry_run_report_shows_plan_summary() {
-        use crate::error::{CopyOp, CopyPlan, DirOp};
+        use crate::types::{CopyOp, CopyPlan, DirOp};
         use tempfile::tempdir;
 
         let home = tempdir().unwrap();

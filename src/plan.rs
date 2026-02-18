@@ -1,6 +1,6 @@
 use walkdir::WalkDir;
 
-use crate::error::{CopyOp, CopyPlan, DetectedMapping, DirOp};
+use crate::types::{CopyOp, CopyPlan, DetectedMapping, DirOp};
 
 /// Build a copy plan from confirmed mappings.
 ///
@@ -52,7 +52,7 @@ pub fn build_plan(mappings: &[DetectedMapping]) -> std::io::Result<CopyPlan> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::XdgDir;
+    use crate::types::XdgDir;
     use std::fs;
     use std::path::PathBuf;
     use tempfile::tempdir;
