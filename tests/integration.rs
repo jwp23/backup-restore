@@ -4,10 +4,10 @@ use tempfile::tempdir;
 
 use backup_restore::conflict::{apply_resolution, Resolution};
 use backup_restore::copy::execute_plan;
-use backup_restore::types::XdgDir;
 use backup_restore::plan::build_plan;
 use backup_restore::report::{format_dry_run_report, format_report};
 use backup_restore::scan::scan_backup;
+use backup_restore::types::XdgDir;
 
 /// Full pipeline: nested backup structure → scan → plan → copy → report
 #[test]
@@ -142,7 +142,10 @@ fn dry_run_does_not_write_files() {
     assert!(report.contains("2 files"), "should show 2 files total");
     assert!(report.contains("Documents"), "should mention Documents");
     assert!(report.contains("Music"), "should mention Music");
-    assert!(report.contains("1 conflict"), "should detect existing notes.txt");
+    assert!(
+        report.contains("1 conflict"),
+        "should detect existing notes.txt"
+    );
 
     // Nothing was written to dest (Music dir should not exist, old file untouched)
     assert!(

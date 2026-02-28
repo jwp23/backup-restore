@@ -150,7 +150,11 @@ fn preserve_permissions(source: &Path, dest: &Path) {
     }
 }
 
-fn make_restore_name(stem: &std::ffi::OsStr, ext: Option<&std::ffi::OsStr>, n: Option<u32>) -> OsString {
+fn make_restore_name(
+    stem: &std::ffi::OsStr,
+    ext: Option<&std::ffi::OsStr>,
+    n: Option<u32>,
+) -> OsString {
     let mut name = OsString::from(stem);
     match n {
         None => name.push(".restore"),

@@ -73,15 +73,14 @@ mod tests {
         fs::create_dir(&src_dir).unwrap();
         fs::write(src_dir.join("readme.txt"), "hello").unwrap();
 
-        let m = mapping(
-            XdgDir::Documents,
-            src_dir,
-            home.path().join("Documents"),
-        );
+        let m = mapping(XdgDir::Documents, src_dir, home.path().join("Documents"));
         let plan = build_plan(&[m]).unwrap();
 
         assert_eq!(plan.files.len(), 1);
-        assert_eq!(plan.files[0].source, backup.path().join("Documents/readme.txt"));
+        assert_eq!(
+            plan.files[0].source,
+            backup.path().join("Documents/readme.txt")
+        );
         assert_eq!(plan.files[0].dest, home.path().join("Documents/readme.txt"));
         assert_eq!(plan.files[0].size, 5);
         assert_eq!(plan.files[0].xdg_dir, XdgDir::Documents);
@@ -104,7 +103,10 @@ mod tests {
         let plan = build_plan(&[m]).unwrap();
 
         assert_eq!(plan.files.len(), 1);
-        assert_eq!(plan.files[0].dest, home.path().join("Documents/a/b/c/deep.txt"));
+        assert_eq!(
+            plan.files[0].dest,
+            home.path().join("Documents/a/b/c/deep.txt")
+        );
         // Dirs: Documents, a, b, c
         assert_eq!(plan.dirs.len(), 4);
     }
@@ -117,11 +119,7 @@ mod tests {
         fs::create_dir(&src_dir).unwrap();
         fs::create_dir(src_dir.join("empty_album")).unwrap();
 
-        let m = mapping(
-            XdgDir::Pictures,
-            src_dir,
-            home.path().join("Pictures"),
-        );
+        let m = mapping(XdgDir::Pictures, src_dir, home.path().join("Pictures"));
         let plan = build_plan(&[m]).unwrap();
 
         assert_eq!(plan.files.len(), 0);
@@ -164,11 +162,7 @@ mod tests {
         fs::write(src_dir.join("file1"), "aaaa").unwrap(); // 4 bytes
         fs::write(src_dir.join("file2"), "bbbbbb").unwrap(); // 6 bytes
 
-        let m = mapping(
-            XdgDir::Downloads,
-            src_dir,
-            home.path().join("Downloads"),
-        );
+        let m = mapping(XdgDir::Downloads, src_dir, home.path().join("Downloads"));
         let plan = build_plan(&[m]).unwrap();
 
         assert_eq!(plan.total_bytes, 10);

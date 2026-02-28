@@ -17,7 +17,13 @@ pub fn format_report(result: &CopyResult, elapsed: Duration) -> String {
         result.errors.len()
     )
     .unwrap();
-    writeln!(out, "Total: {} in {:.1}s", format_bytes(result.bytes_copied), elapsed.as_secs_f64()).unwrap();
+    writeln!(
+        out,
+        "Total: {} in {:.1}s",
+        format_bytes(result.bytes_copied),
+        elapsed.as_secs_f64()
+    )
+    .unwrap();
 
     // Per-XDG breakdown
     let mut by_dir: HashMap<XdgDir, (usize, usize, usize)> = HashMap::new();
@@ -58,11 +64,23 @@ pub fn format_report(result: &CopyResult, elapsed: Duration) -> String {
         writeln!(out, "\nConflicts:").unwrap();
         if result.conflicts.len() <= 10 {
             for c in &result.conflicts {
-                writeln!(out, "  {} → {}", c.original_path.display(), c.restore_path.display()).unwrap();
+                writeln!(
+                    out,
+                    "  {} → {}",
+                    c.original_path.display(),
+                    c.restore_path.display()
+                )
+                .unwrap();
             }
         } else {
             for c in result.conflicts.iter().take(5) {
-                writeln!(out, "  {} → {}", c.original_path.display(), c.restore_path.display()).unwrap();
+                writeln!(
+                    out,
+                    "  {} → {}",
+                    c.original_path.display(),
+                    c.restore_path.display()
+                )
+                .unwrap();
             }
             writeln!(out, "  ... and {} more", result.conflicts.len() - 5).unwrap();
         }
@@ -98,7 +116,14 @@ pub fn format_dry_run_report(plan: &CopyPlan) -> String {
         let mut dirs: Vec<_> = by_dir.into_iter().collect();
         dirs.sort_by_key(|(d, _)| d.dir_name());
         for (dir, (count, bytes)) in dirs {
-            writeln!(out, "  {:<12} {} files, {}", dir, count, format_bytes(bytes)).unwrap();
+            writeln!(
+                out,
+                "  {:<12} {} files, {}",
+                dir,
+                count,
+                format_bytes(bytes)
+            )
+            .unwrap();
         }
     }
 
@@ -177,14 +202,12 @@ mod tests {
     fn report_shows_conflicts_and_errors() {
         let result = CopyResult {
             copied: vec![],
-            conflicts: vec![
-                Conflict {
-                    restore_path: PathBuf::from("/home/joe/Documents/a.restore.txt"),
-                    original_path: PathBuf::from("/home/joe/Documents/a.txt"),
-                    size: 50,
-                    xdg_dir: XdgDir::Documents,
-                },
-            ],
+            conflicts: vec![Conflict {
+                restore_path: PathBuf::from("/home/joe/Documents/a.restore.txt"),
+                original_path: PathBuf::from("/home/joe/Documents/a.txt"),
+                size: 50,
+                xdg_dir: XdgDir::Documents,
+            }],
             errors: vec![CopyError {
                 source: PathBuf::from("/backup/Music/bad.mp3"),
                 dest: PathBuf::from("/home/joe/Music/bad.mp3"),
@@ -269,9 +292,15 @@ mod tests {
 
         let plan = CopyPlan {
             dirs: vec![
-                DirOp { dest: docs_dir.clone() },
-                DirOp { dest: docs_dir.join("subdir") },
-                DirOp { dest: music_dir.clone() },
+                DirOp {
+                    dest: docs_dir.clone(),
+                },
+                DirOp {
+                    dest: docs_dir.join("subdir"),
+                },
+                DirOp {
+                    dest: music_dir.clone(),
+                },
             ],
             files: vec![
                 CopyOp {
@@ -303,15 +332,24 @@ mod tests {
         assert!(report.contains("5.2 KiB"), "should show total bytes");
 
         // Directories to create
-        assert!(report.contains("3 directories"), "should show directory count");
+        assert!(
+            report.contains("3 directories"),
+            "should show directory count"
+        );
 
         // Per-XDG breakdown
         assert!(report.contains("Documents"), "should show Documents");
         assert!(report.contains("Music"), "should show Music");
 
         // Conflict detection
-        assert!(report.contains("1 conflict"), "should detect existing dest file");
-        assert!(report.contains("existing.txt"), "should name the conflicting file");
+        assert!(
+            report.contains("1 conflict"),
+            "should detect existing dest file"
+        );
+        assert!(
+            report.contains("existing.txt"),
+            "should name the conflicting file"
+        );
     }
 
     #[test]

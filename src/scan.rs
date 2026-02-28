@@ -117,7 +117,8 @@ mod tests {
         let result = scan_backup(backup.path(), home.path());
 
         // Should find both — caller (main.rs) handles disambiguation
-        let doc_mappings: Vec<&DetectedMapping> = result.mappings
+        let doc_mappings: Vec<&DetectedMapping> = result
+            .mappings
             .iter()
             .filter(|m| m.xdg_dir == XdgDir::Documents)
             .collect();
@@ -157,7 +158,10 @@ mod tests {
 
         assert_eq!(result.mappings.len(), 1);
         assert_eq!(result.mappings[0].xdg_dir, XdgDir::Documents);
-        assert_eq!(result.mappings[0].source_path, backup.path().join("Documents"));
+        assert_eq!(
+            result.mappings[0].source_path,
+            backup.path().join("Documents")
+        );
         assert_eq!(result.mappings[0].dest_path, home.path().join("Documents"));
     }
 
@@ -176,7 +180,10 @@ mod tests {
         let result = scan_backup(backup.path(), home.path());
 
         assert_eq!(result.mappings.len(), 1);
-        assert!(!result.warnings.is_empty(), "should collect warnings for unreadable dirs");
+        assert!(
+            !result.warnings.is_empty(),
+            "should collect warnings for unreadable dirs"
+        );
 
         // Restore permissions so tempdir cleanup succeeds
         fs::set_permissions(&unreadable, fs::Permissions::from_mode(0o755)).unwrap();

@@ -1,5 +1,5 @@
-use std::fs;
 use crate::types::Conflict;
+use std::fs;
 
 /// What to do with a conflict.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -52,7 +52,10 @@ mod tests {
 
         apply_resolution(&conflict, Resolution::Overwrite).unwrap();
 
-        assert_eq!(fs::read_to_string(dir.path().join("photo.jpg")).unwrap(), "restored");
+        assert_eq!(
+            fs::read_to_string(dir.path().join("photo.jpg")).unwrap(),
+            "restored"
+        );
         assert!(!dir.path().join("photo.restore.jpg").exists());
     }
 
@@ -63,7 +66,10 @@ mod tests {
 
         apply_resolution(&conflict, Resolution::KeepOriginal).unwrap();
 
-        assert_eq!(fs::read_to_string(dir.path().join("photo.jpg")).unwrap(), "original");
+        assert_eq!(
+            fs::read_to_string(dir.path().join("photo.jpg")).unwrap(),
+            "original"
+        );
         assert!(!dir.path().join("photo.restore.jpg").exists());
     }
 
@@ -76,7 +82,10 @@ mod tests {
 
         assert!(dir.path().join("photo.jpg").exists());
         assert!(dir.path().join("photo.restore.jpg").exists());
-        assert_eq!(fs::read_to_string(dir.path().join("photo.jpg")).unwrap(), "original");
+        assert_eq!(
+            fs::read_to_string(dir.path().join("photo.jpg")).unwrap(),
+            "original"
+        );
         assert_eq!(
             fs::read_to_string(dir.path().join("photo.restore.jpg")).unwrap(),
             "restored"

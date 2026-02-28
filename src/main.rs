@@ -8,12 +8,15 @@ use console::style;
 use dialoguer::{Confirm, Select};
 
 use backup_restore::conflict::{self, Resolution};
-use backup_restore::types::{Conflict, DetectedMapping, XdgDir};
 use backup_restore::copy;
+use backup_restore::types::{Conflict, DetectedMapping, XdgDir};
 use backup_restore::{plan, report, scan};
 
 #[derive(Parser)]
-#[command(name = "backup-restore", about = "Restore files from a backup into your home directory")]
+#[command(
+    name = "backup-restore",
+    about = "Restore files from a backup into your home directory"
+)]
 struct Cli {
     /// Path to the backup directory to restore from
     backup_dir: PathBuf,
@@ -61,11 +64,7 @@ fn run() -> anyhow::Result<()> {
     let scan_result = scan::scan_backup(&cli.backup_dir, &home_dir);
 
     for warning in &scan_result.warnings {
-        eprintln!(
-            "{} Scan warning: {}",
-            style("!").yellow().bold(),
-            warning
-        );
+        eprintln!("{} Scan warning: {}", style("!").yellow().bold(), warning);
     }
 
     if scan_result.mappings.is_empty() {
@@ -149,7 +148,9 @@ fn run() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn resolve_duplicate_mappings(all_mappings: Vec<DetectedMapping>) -> anyhow::Result<Vec<DetectedMapping>> {
+fn resolve_duplicate_mappings(
+    all_mappings: Vec<DetectedMapping>,
+) -> anyhow::Result<Vec<DetectedMapping>> {
     let mut by_dir: BTreeMap<XdgDir, Vec<DetectedMapping>> = BTreeMap::new();
     for m in all_mappings {
         by_dir.entry(m.xdg_dir).or_default().push(m);
@@ -233,7 +234,11 @@ fn resolve_per_folder(conflicts: &[Conflict]) -> anyhow::Result<()> {
 
     for (xdg_dir, folder_conflicts) in &by_dir {
         let selection = Select::new()
-            .with_prompt(format!("{} ({} conflicts)", xdg_dir, folder_conflicts.len()))
+            .with_prompt(format!(
+                "{} ({} conflicts)",
+                xdg_dir,
+                folder_conflicts.len()
+            ))
             .items(options)
             .default(2)
             .interact()?;
@@ -263,11 +268,7 @@ fn resolve_individually(conflicts: &[Conflict]) -> anyhow::Result<()> {
     let options = &["Overwrite", "Keep original", "Leave as-is"];
 
     for c in conflicts {
-        let prompt = format!(
-            "{} (restore: {} bytes)",
-            c.original_path.display(),
-            c.size
-        );
+        let prompt = format!("{} (restore: {} bytes)", c.original_path.display(), c.size);
         let selection = Select::new()
             .with_prompt(prompt)
             .items(options)
