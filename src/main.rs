@@ -172,7 +172,7 @@ fn resolve_duplicate_mappings(
                 .collect();
 
             let selection = Select::new()
-                .with_prompt(format!("Which {} to restore?", xdg_dir))
+                .with_prompt(format!("Which {xdg_dir} to restore?"))
                 .items(&labels)
                 .default(0)
                 .interact()?;

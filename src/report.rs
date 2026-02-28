@@ -44,8 +44,7 @@ pub fn format_report(result: &CopyResult, elapsed: Duration) -> String {
         for (dir, (copied, conflicts, errors)) in dirs {
             writeln!(
                 out,
-                "  {:<12} {} copied, {} conflicts, {} errors",
-                dir, copied, conflicts, errors
+                "  {dir:<12} {copied} copied, {conflicts} conflicts, {errors} errors"
             )
             .unwrap();
         }
@@ -55,7 +54,7 @@ pub fn format_report(result: &CopyResult, elapsed: Duration) -> String {
     if !result.errors.is_empty() {
         writeln!(out, "\nErrors:").unwrap();
         for err in &result.errors {
-            writeln!(out, "  {}", err).unwrap();
+            writeln!(out, "  {err}").unwrap();
         }
     }
 
@@ -157,7 +156,7 @@ pub fn format_bytes(bytes: u64) -> String {
     } else if bytes >= KB {
         format!("{:.1} KiB", bytes as f64 / KB as f64)
     } else {
-        format!("{} B", bytes)
+        format!("{bytes} B")
     }
 }
 

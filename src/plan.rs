@@ -5,7 +5,7 @@ use crate::types::{CopyOp, CopyPlan, DetectedMapping, DirOp};
 /// Build a copy plan from confirmed mappings.
 ///
 /// Enumerates all files and directories within each mapping's source,
-/// producing CopyOps for files and DirOps for directories.
+/// producing `CopyOps` for files and `DirOps` for directories.
 pub fn build_plan(mappings: &[DetectedMapping]) -> std::io::Result<CopyPlan> {
     let mut files = Vec::new();
     let mut dirs = Vec::new();

@@ -102,7 +102,7 @@ fn copy_file(op: &CopyOp, result: &Mutex<CopyResult>, progress: &ProgressBar) {
 }
 
 /// Atomically create dest and copy source into it.
-/// Returns AlreadyExists if dest already exists.
+/// Returns `AlreadyExists` if dest already exists.
 fn try_copy_atomic(source: &Path, dest: &Path) -> io::Result<u64> {
     let mut src_file = File::open(source)?;
     let mut dst_file = File::create_new(dest)?;
@@ -136,7 +136,7 @@ fn write_to_restore_path(source: &Path, original_dest: &Path) -> io::Result<(Pat
                 preserve_permissions(source, &candidate);
                 return Ok((candidate, bytes));
             }
-            Err(e) if e.kind() == io::ErrorKind::AlreadyExists => continue,
+            Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {}
             Err(e) => return Err(e),
         }
     }

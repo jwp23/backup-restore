@@ -40,7 +40,7 @@ impl XdgDir {
         }
     }
 
-    /// Try to parse a directory name into an XdgDir.
+    /// Try to parse a directory name into an `XdgDir`.
     pub fn from_dir_name(name: &str) -> Option<XdgDir> {
         XdgDir::ALL.iter().find(|d| d.dir_name() == name).copied()
     }

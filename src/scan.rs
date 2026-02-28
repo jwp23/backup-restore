@@ -13,7 +13,7 @@ pub struct ScanResult {
 ///
 /// Walks the backup root looking for directories matching XDG names.
 /// When found, records the mapping and skips descending into them.
-/// Returns all detected mappings (may include duplicates for the same XdgDir
+/// Returns all detected mappings (may include duplicates for the same `XdgDir`
 /// if found at multiple paths), plus any walkdir errors as warnings.
 pub fn scan_backup(backup_root: &Path, home_dir: &Path) -> ScanResult {
     let mut mappings = Vec::new();
@@ -38,9 +38,8 @@ pub fn scan_backup(backup_root: &Path, home_dir: &Path) -> ScanResult {
             continue;
         }
 
-        let dir_name = match entry.file_name().to_str() {
-            Some(name) => name,
-            None => continue,
+        let Some(dir_name) = entry.file_name().to_str() else {
+            continue;
         };
 
         if let Some(xdg_dir) = XdgDir::from_dir_name(dir_name) {

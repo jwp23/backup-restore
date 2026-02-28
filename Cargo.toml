@@ -14,3 +14,14 @@ walkdir = "2"
 
 [dev-dependencies]
 tempfile = "3"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+# Intentional: byte counts displayed as f64 for human-readable formatting
+cast_precision_loss = "allow"
+# Noisy without value for a CLI tool
+must_use_candidate = "allow"
+# Error types are self-evident from Result signatures
+missing_errors_doc = "allow"
+# Panics are in infallible template strings, not public API concerns
+missing_panics_doc = "allow"
