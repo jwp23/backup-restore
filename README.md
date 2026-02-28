@@ -72,3 +72,27 @@ The tool will:
 ### Conflicts
 
 When a destination file already exists, the restored version is written alongside it with a `.restore` suffix (e.g. `notes.restore.txt`). After copying, you choose how to resolve: overwrite all, keep all originals, decide per folder, or decide per file.
+
+## Development
+
+### Setup
+
+After cloning, run the setup script to enable pre-commit hooks:
+
+```
+./setup.sh
+```
+
+This configures git to run formatting, lint, and test checks before each commit.
+
+### Quality checks
+
+The pre-commit hook runs these automatically, but you can run them manually:
+
+```
+cargo fmt --check    # formatting
+cargo clippy         # lints
+cargo test           # tests
+cargo audit          # dependency vulnerabilities
+cargo deny check     # license and dependency policy
+```
